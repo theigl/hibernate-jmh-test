@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * This template demonstrates how to develop a test case for Hibernate ORM, using the Java Persistence API.
  */
 @State(Scope.Thread)
-public class JPAUnitTestCase {
+public class JPABenchmark {
 
 	private EntityManagerFactory entityManagerFactory;
 
@@ -57,7 +57,7 @@ public class JPAUnitTestCase {
 	public static void main(String[] args) throws RunnerException, IOException {
 		if (args.length == 0) {
 			final Options opt = new OptionsBuilder()
-					.include(".*" + JPAUnitTestCase.class.getSimpleName() + ".*")
+					.include(".*" + JPABenchmark.class.getSimpleName() + ".*")
 					.warmupIterations(3)
 					.warmupTime(TimeValue.seconds(3))
 					.measurementIterations(3)
