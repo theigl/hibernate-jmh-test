@@ -11,6 +11,7 @@
 		<version.com.h2database>2.2.224</version.com.h2database>
 		<version.junit>4.13.2</version.junit>
 		<version.org.hibernate>5.6.15.Final</version.org.hibernate>
+		<version.jmh>1.36</version.jmh>
 	</properties>
 
 	<dependencies>
@@ -34,6 +35,17 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>${version.junit}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-core</artifactId>
+			<version>${version.jmh}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-generator-annprocess</artifactId>
+			<version>${version.jmh}</version>
 		</dependency>
 
 		<!-- Not necessary for ORM 5.2 and above -->
