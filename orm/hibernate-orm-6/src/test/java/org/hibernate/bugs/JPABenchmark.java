@@ -1,6 +1,5 @@
 package org.hibernate.bugs;
 
-import jakarta.persistence.*;
 import org.openjdk.jmh.Main;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
@@ -9,6 +8,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
+import jakarta.persistence.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +52,18 @@ public class JPABenchmark {
 		authors.forEach(author -> assertFalse(author.books.isEmpty()));
 		em.getTransaction().commit();
 		em.close();
+	}
+	
+	@Benchmark
+	public void perf6LargeTransaction() {
+		final EntityManager em = entityManagerFactory.createEntityManager();
+		em.getTransaction().begin();
+		em.setFlushMode(FlushModeType.COMMIT);
+		for (int i = 0; i < 1_000; i++) {
+			final List<Author> authors = em.createQuery("from Author", Author.class).getResultList();
+			authors.forEach(author -> assertFalse(author.books.isEmpty()));
+		}
+		em.getTransaction().commit();
 	}
 
 	public static void main(String[] args) throws RunnerException, IOException {

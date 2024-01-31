@@ -54,6 +54,19 @@ public class JPABenchmark {
 		em.close();
 	}
 
+	@Benchmark
+	public void perf5LargeTransaction() {
+		final EntityManager em = entityManagerFactory.createEntityManager();
+		em.getTransaction().begin();
+		em.setFlushMode(FlushModeType.COMMIT);
+		for (int i = 0; i < 1_000; i++) {
+			final List<Author> authors = em.createQuery("from Author", Author.class).getResultList();
+			authors.forEach(author -> assertFalse(author.books.isEmpty()));
+		}
+		em.getTransaction().commit();
+		em.close();
+	}
+
 	public static void main(String[] args) throws RunnerException, IOException {
 		if (args.length == 0) {
 			final Options opt = new OptionsBuilder()
