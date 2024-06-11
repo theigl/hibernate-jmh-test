@@ -53,6 +53,21 @@ public class JPABenchmark {
 		em.getTransaction().commit();
 		em.close();
 	}
+
+	@Benchmark
+	public void perf6Cache() {
+		final EntityManager em = entityManagerFactory.createEntityManager();
+		em.getTransaction().begin();
+		final Author author = em.createQuery("from Author", Author.class).setMaxResults(1).getSingleResult();
+		for (int i = 0; i < 1000; i++) {
+			em.createQuery("from Book b where b.author = :author", Book.class)
+					.setParameter("author", author)
+					.setHint("org.hibernate.cacheable", true)
+					.getResultList();
+		}
+		em.getTransaction().commit();
+		em.close();
+	}
 	
 	@Benchmark
 	public void perf6LargeTransaction() {
@@ -85,9 +100,6 @@ public class JPABenchmark {
 	}
 
 	public void populateData(EntityManager entityManager) {
-		final Book book = new Book();
-		book.name = "HTTP Definitive guide";
-
 		final Author author = new Author();
 		author.name = "David Gourley";
 
@@ -95,12 +107,15 @@ public class JPABenchmark {
 		details.name = "Author Details";
 		details.author = author;
 		author.details = details;
-
-		author.books.add(book);
-		book.author = author;
-
 		entityManager.persist(author);
-		entityManager.persist(book);
+
+		for (int i = 0; i < 5; i++) {
+			final Book book = new Book();
+			book.name = "HTTP Definitive guide " + i;
+			book.author = author;
+			entityManager.persist(book);
+			author.books.add(book);
+		}
 	}
 
 	@Entity(name = "Author")
@@ -135,6 +150,7 @@ public class JPABenchmark {
 		public Author author;
 	}
 
+	@org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
 	@Entity(name = "Book")
 	@Table(name = "Book")
 	public static class Book {
