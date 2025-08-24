@@ -5,10 +5,6 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      quarkus:
-        patterns:
-          - "io.quarkus*"
-          - "io.quarkiverse*"
       orm:
         patterns:
           - "org.hibernate.orm*:*"
@@ -21,6 +17,12 @@ updates:
       reactive:
         patterns:
           - "org.hibernate.reactive:*"
+      reactive-dependencies-jdbc:
+        patterns:
+          - "com.mysql:mysql-connector-j"
+          - "org.mariadb.jdbc:mariadb-java-client"
+          - "com.ibm.db2:jcc"
+          - "com.microsoft.sqlserver:mssql-jdbc"
       maven-plugins:
         patterns:
           - "*maven*plugin*"
@@ -50,3 +52,10 @@ updates:
         update-types: [ "version-update:semver-major" ]
       - dependency-name: "org.elasticsearch.*:*"
         update-types: [ "version-update:semver-major" ]
+      # Major versions of vertx will (most likely) require a new version of Reactive, so will be updated "manually":
+      - dependency-name: "io.vertx:*"
+        update-types: [ "version-update:semver-major" ]
+      # Upgrading JUnit may break the ORM's bytecodeenhancement engine, hence major/minor updates are manual,
+      # when we perform an update to a new major/minor version of ORM.
+      - dependency-name: "org.junit:junit-bom"
+        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
