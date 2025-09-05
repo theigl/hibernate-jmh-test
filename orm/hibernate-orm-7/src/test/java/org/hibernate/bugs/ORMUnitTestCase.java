@@ -5,6 +5,7 @@ import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.query.SelectionQuery;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.hibernate.query.criteria.JpaParameterExpression;
 import org.hibernate.stat.spi.StatisticsImplementor;
 import org.hibernate.testing.orm.junit.*;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DomainModel(
 		annotatedClasses = {
-				ORMUnitTestCase.Book.class
+				ORMUnitTestCase.Book.class,
+				ORMUnitTestCase.Author.class
 				// Add your entities here.
 				// Foo.class,
 				// Bar.class
@@ -85,6 +87,42 @@ class ORMUnitTestCase {
 		});
 	}
 
+	@Test
+	void criteriaParameterQueryPlanHitBasicType(SessionFactoryScope scope) {
+		// Caching with parameter does work for basic types
+
+		scope.getSessionFactory().getStatistics().clear();
+		scope.inTransaction(session -> {
+			createBookSelectionQueryWithParameter(session, "name").getResultList();
+			createBookSelectionQueryWithParameter(session, "name").getResultList();
+			createBookSelectionQueryWithParameter(session, "name").getResultList();
+
+			final StatisticsImplementor stats = scope.getSessionFactory().getStatistics();
+			assertThat(stats.getQueryPlanCacheMissCount()).isEqualTo(1);
+			assertThat(stats.getQueryPlanCacheHitCount()).isEqualTo(2);
+		});
+	}
+
+	@Test
+	void criteriaParameterQueryPlanMissEntity(SessionFactoryScope scope) {
+		// Caching with parameter does not work because of org.hibernate.query.sqm.internal.SqmInterpretationsKey.isCacheable
+
+		scope.getSessionFactory().getStatistics().clear();
+		scope.inTransaction(session -> {
+			final Author author = new Author();
+			author.name = "Any";
+			session.persist(author);
+
+			createBookSelectionQueryWithParameter(session, author).getResultList();
+			createBookSelectionQueryWithParameter(session, author).getResultList();
+			createBookSelectionQueryWithParameter(session, author).getResultList();
+
+			final StatisticsImplementor stats = scope.getSessionFactory().getStatistics();
+			assertThat(stats.getQueryPlanCacheMissCount()).isEqualTo(1);
+			assertThat(stats.getQueryPlanCacheHitCount()).isEqualTo(2);
+		});
+	}
+
 	private static SelectionQuery<Book> createBookSelectionQuery(SessionImplementor session, String name) {
 		final HibernateCriteriaBuilder cb = session.getCriteriaBuilder();
 		final JpaCriteriaQuery<Book> q = cb.createQuery(Book.class);
@@ -92,6 +130,30 @@ class ORMUnitTestCase {
 		q.select(root);
 		q.where(cb.equal(root.get("name"), name));
 		return session.createSelectionQuery(q);
+	}
+
+	private static SelectionQuery<Book> createBookSelectionQueryWithParameter(SessionImplementor session, String name) {
+		final HibernateCriteriaBuilder cb = session.getCriteriaBuilder();
+		final JpaCriteriaQuery<Book> q = cb.createQuery(Book.class);
+		final Root<Book> root = q.from(Book.class);
+		q.select(root);
+		final JpaParameterExpression<String> p = cb.parameter(String.class, "name");
+		q.where(cb.equal(root.get("name"), p));
+		final SelectionQuery<Book> sq = session.createSelectionQuery(q);
+		sq.setParameter("name", name);
+		return sq;
+	}
+
+	private static SelectionQuery<Book> createBookSelectionQueryWithParameter(SessionImplementor session, Author author) {
+		final HibernateCriteriaBuilder cb = session.getCriteriaBuilder();
+		final JpaCriteriaQuery<Book> q = cb.createQuery(Book.class);
+		final Root<Book> root = q.from(Book.class);
+		q.select(root);
+		final JpaParameterExpression<Author> p = cb.parameter(Author.class, "author");
+		q.where(cb.equal(root.get("author"), p));
+		final SelectionQuery<Book> sq = session.createSelectionQuery(q);
+		sq.setParameter("author", author);
+		return sq;
 	}
 
 	private static SelectionQuery<Book> createBookEmbedSelectionQuery(SessionImplementor session) {
@@ -102,6 +164,17 @@ class ORMUnitTestCase {
 		final Path<BookDetails> bookDetails = root.get("details"); // Note: the test passes with root.join("details")
 		q.where(cb.equal(bookDetails.get("info"), "anyName"));
 		return session.createSelectionQuery(q);
+	}
+
+	@Entity(name = "Author")
+	@Table(name = "Author")
+	public static class Author {
+		@Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+		public Long id;
+
+		@Column
+		public String name;
 	}
 
 	@Entity(name = "Book")
@@ -116,6 +189,9 @@ class ORMUnitTestCase {
 
 		@Embedded
 		public BookDetails details;
+
+		@ManyToOne(fetch = FetchType.LAZY)
+		public Author author;
 	}
 
 	@Embeddable
